@@ -34,7 +34,7 @@
     "react-native": ">=0.71"
   },
   "devDependencies": {
-    "@babel/core": "^7.24.9",
+    "@babel/core": "^8.0.1",
     "@react-native/babel-preset": "^0.75.0",
     "@testing-library/react-native": "^12.5.0",
     "@types/jest": "^29.5.12",
