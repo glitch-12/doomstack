@@ -12,7 +12,7 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 
 | Component  | WCAG criteria covered | Automated (lint + test) | Manual VoiceOver | Manual TalkBack |
 |------------|------------------------|--------------------------|-------------------|-------------------|
-| TextInput  | 1.3.1, 3.3.2, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
+| TextInput  | 1.3.1, 3.3.2, 4.1.2, 4.1.3 | ✅ (`TextInput.test.tsx`) | ⬜ pending          | ⬜ pending          |
 | Button     | 2.5.5, 4.1.2           | ⬜ not yet built          | ⬜                 | ⬜                 |
 | Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
 | RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
@@ -20,6 +20,8 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 | Toast      | 4.1.3 (status messages)| ⬜ not yet built          | ⬜                 | ⬜                 |
 
 Each row moves to ✅ only once all four columns are done for that component — see [ROADMAP.md](ROADMAP.md) for build order.
+
+> **Manual VoiceOver/TalkBack passes require a real device or simulator and haven't been run yet for TextInput** — that step needs to happen on your machine (iOS Simulator + VoiceOver, Android emulator + TalkBack), not from this environment. Once you've done it, update the two "Manual" columns above with ✅/❌ and a one-line note.
 
 ## Shared conventions
 
