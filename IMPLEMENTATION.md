@@ -1,0 +1,150 @@
+# Implementation
+
+This document explains what every file in the repo does and why it's built the way it is. [ROADMAP.md](ROADMAP.md) says *what's next*; [ARCHITECTURE.md](ARCHITECTURE.md) says *how it's shaped*; this file says *what actually exists right now, in detail*.
+
+---
+
+## Tooling & config
+
+### `package.json`
+Declares the package as `doomstack`, a plain TypeScript library — `react`/`react-native` are **peer dependencies**, not bundled, since consumers already have their own copies. Three scripts matter:
+- `typecheck` → `tsc --noEmit` (type errors only, no build output)
+- `lint` → `eslint "src/**/*.{ts,tsx}"`
+- `test` → `jest`
+
+These three are exactly what `.github/workflows/ci.yml` runs, so "does it pass CI" is always reproducible locally with the same three commands.
+
+### `tsconfig.json`
+`strict: true`, plus `noUnusedLocals`/`noUnusedParameters`. `jsx: "react-native"` (not `react-jsx`) matches the RN transform. Only `src/` is included — `lib/` (build output) and `example/` (not created yet) are excluded so typechecking never looks at generated code.
+
+### `.eslintrc.js`
+The accessibility gate. Built on `@typescript-eslint` + `eslint-plugin-react-native-a11y`. The rules actually enabled (all as **errors**, meaning they fail `npm run lint` and thus CI):
+
+| Rule | What it catches |
+|---|---|
+| `has-accessibility-props` | Interactive elements missing any accessibility props at all |
+| `has-valid-accessibility-descriptors` | Malformed `accessibilityLabel`/`accessibilityHint` |
+| `has-valid-accessibility-role` | Missing or invalid `accessibilityRole` |
+| `has-valid-accessibility-state` / `-states` | Missing or malformed `accessibilityState` |
+| `has-valid-accessibility-value` | Malformed `accessibilityValue` (sliders, progress bars) |
+| `no-nested-touchables` | Touchable inside another touchable — breaks screen reader focus order |
+
+`@typescript-eslint/no-explicit-any` is also an error — no `any` escape hatches.
+
+**Known gotcha (hit during Phase 0):** the plugin's actual rule names are `has-valid-accessibility-role` / `has-valid-accessibility-state`, not `has-accessibility-role`/`has-accessibility-state` as the plugin's own naming pattern would suggest. Using the wrong names doesn't error at config time in an obvious way — ESLint just says "rule not found." If you add more rules from this plugin later, check `node_modules/eslint-plugin-react-native-a11y`'s exported `rules` object first.
+
+### `babel.config.js` / `jest.config.js`
+Babel uses `@react-native/babel-preset` (needed for Jest to transform JSX/Flow-typed RN internals). Jest uses the `react-native` preset plus `@testing-library/react-native/extend-expect` for matchers like `toBeTruthy()`/`toHaveTextContent()`. `transformIgnorePatterns` explicitly allows transforming `react-native` and `@react-native/*` packages, since RN itself ships untranspiled modern JS in `node_modules`.
+
+Note: we deliberately do **not** depend on `@testing-library/jest-native` — it's deprecated as of `@testing-library/react-native` v12.4+, which ships the same matchers itself.
+
+---
+
+## `src/theme/` — shared design tokens
+
+### `tokens.ts`
+Two flat objects, `darkColors` and `lightColors` (dark is the default scheme, per the existing Undercover project convention), plus `spacing` and `typography` scales. `colorsForScheme(scheme)` is the only function — a pure lookup, no logic to test beyond "does it return the right object," which is what `tokens.test.ts` checks.
+
+### `ThemeProvider.tsx`
+A React context provider. Reads the OS color scheme via RN's `useColorScheme()`, but accepts an explicit `scheme` prop to override it (components' tests pass `scheme="dark"` explicitly so tests don't depend on the test runner's OS theme). Exposes `useTheme()`, which throws if called outside a `ThemeProvider` — fail loud instead of silently rendering with `undefined` colors.
+
+### `index.ts`
+Re-exports everything from `tokens.ts` and `ThemeProvider.tsx`.
+
+---
+
+## `src/a11y/constants.ts` — shared accessibility helpers
+
+`MIN_TOUCH_TARGET = 44` — the WCAG 2.5.5 minimum target size in density-independent pixels. `hitSlopForSize(measuredSize)` computes the `hitSlop` needed to pad a visually-smaller element up to that minimum, splitting the deficit evenly across all four sides. This exists so no component invents its own touch-target math — they all import this one helper, which is also what `constants.test.ts` verifies (zero hitSlop when already at minimum, evenly split hitSlop when undersized).
+
+---
+
+## `src/components/TextInput/` — first real component
+
+### `TextInput.tsx`
+Wraps RN's own `TextInput` with label, error, and disabled handling. Key decisions:
+
+- **Accessible name strategy**: rather than trying to associate a separate label `<Text>` with the input (which is unreliable across iOS/Android), the component builds a single `accessibilityLabel` string directly: `"Email"` normally, `"Email, Enter a valid email"` when there's an error. This guarantees the screen reader always announces something complete and correct, regardless of platform label-association quirks.
+- **Error announcement**: RN's `accessibilityLiveRegion` prop only works on Android — iOS ignores it. So the component also calls `AccessibilityInfo.announceForAccessibility(error)` in a `useEffect` that fires only when the error text actually changes (tracked via a `useRef`, to avoid re-announcing on every re-render). This is what makes the error reach VoiceOver users, not just TalkBack users.
+- **Disabled state**: reflected in two places that serve different consumers — `editable={!disabled}` (functional: blocks typing) and `accessibilityState={{ disabled }}` (informational: screen readers announce "dimmed"/"disabled").
+- **Touch target**: `minHeight: MIN_TOUCH_TARGET` applied directly in the input's style array, sourced from the shared `a11y/constants.ts` helper rather than a hardcoded `44`.
+- **Theming**: every color (text, background, border, placeholder, error) comes from `useTheme()` — nothing hardcoded, so dark/light and any future theme override propagate automatically.
+
+**Known gotcha (hit while building this component):** an early version tried to set `accessibilityState={{ disabled, invalid: Boolean(error) }}`. TypeScript rejected it — React Native's `AccessibilityState` type has no `invalid` field on either platform (there's no `aria-invalid` equivalent in this RN version's types either). There is no built-in cross-platform "mark this field as invalid" signal in RN's accessibility API. The error is instead communicated through the accessible-name folding and the active announcement described above, which is the actually-supported mechanism.
+
+### `TextInput.test.tsx`
+Five tests, all querying by **accessible label**, not `testID` — this is deliberate: if the component ever stops exposing a proper accessible name, the test can't even find the element and fails, which makes the test suite itself an accessibility check rather than just a rendering check.
+
+1. Renders with a findable accessible name ("Email")
+2. `onChangeText` fires with typed text
+3. Error text folds into the accessible name and also renders visibly
+4. `disabled` shows up in both `accessibilityState` and `editable`
+5. Rendered `minHeight` is `>= MIN_TOUCH_TARGET`
+
+All tests wrap the component in `<ThemeProvider scheme="dark">` since `useTheme()` throws without a provider in the tree.
+
+### `index.ts`
+Re-exports `TextInput.tsx`. Re-exported again from `src/index.ts`, so consumers eventually do `import { TextInput } from 'doomstack'`.
+
+---
+
+## `src/components/Button/` — Phase 2, first primitive
+
+### `Button.tsx`
+Wraps RN's `Pressable` (not `TouchableOpacity` — `Pressable` is the modern API and exposes the `pressed` render-prop state used for the visual press feedback below). Key decisions:
+
+- **Accessible name**: same pattern as `TextInput` — `label` is both the visible text and the `accessibilityLabel`, so there's exactly one string to keep in sync, not two.
+- **Role**: explicit `accessibilityRole="button"` plus `accessible` set directly, rather than relying on `Pressable`'s defaults, so the lint rule (`has-valid-accessibility-role`) and the behavior can't silently drift apart.
+- **Disabled state**: like `TextInput`, reflected in two places — `disabled` (functional: `Pressable` itself blocks `onPress`) and `accessibilityState={{ disabled }}` (informational: screen readers announce it). Disabled also wins over the transient `pressed` opacity change, so a disabled button never looks "pressable" even mid-touch.
+- **Touch target**: `minHeight`/`minWidth` both set to `MIN_TOUCH_TARGET` — unlike `TextInput` (which only needs height), a button can be small in both dimensions if not constrained.
+- **Variants**: `primary`/`secondary`, each pulling `background`/`text`/`border` from `useTheme()` — no hardcoded colors, same as `TextInput`.
+
+### `Button.test.tsx`
+Five tests, querying by **role + accessible name** (`getByRole('button', { name: ... })`) rather than `getByLabelText` or `testID`, per the convention in `ACCESSIBILITY.md` (role-based queries catch a missing/wrong `accessibilityRole` that label-only queries wouldn't).
+
+1. Renders with a findable `button` role and name ("Submit")
+2. `onPress` fires when pressed
+3. `disabled` shows up in `accessibilityState` and actually blocks `onPress`
+4. Rendered `minHeight`/`minWidth` are both `>= MIN_TOUCH_TARGET`
+5. `primary` and `secondary` variants resolve to different `backgroundColor`s
+
+### `index.ts`
+Re-exports `Button.tsx`. Re-exported again from `src/index.ts`.
+
+---
+
+## `src/index.ts` — public API surface
+
+Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, and `components/Button`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
+
+---
+
+## `.github/workflows/ci.yml` — quality gate
+
+Three parallel jobs, each a required status check on `main`: `lint`, `typecheck`, `test` (with `--ci --coverage`). Deliberately split into separate jobs rather than one script so GitHub shows three independent checkmarks — a lint failure and a test failure are visually distinguishable at a glance instead of one opaque "CI failed."
+
+## `.github/workflows/sast.yml` — security gate
+
+Two jobs, decoupled from `ci.yml` on purpose (a security-tool outage shouldn't block a docs-only PR's tests from going green, and it keeps the README's two badges — quality vs. security — independently meaningful):
+- **Semgrep** (`p/owasp-top-ten`, `p/typescript`, `p/react` rulesets), SARIF uploaded to GitHub code scanning
+- **CodeQL** (`javascript-typescript` query suite)
+
+Also runs on a weekly cron (`0 6 * * 1`) so newly-published rules/advisories get checked even without a code change.
+
+## `.github/dependabot.yml`
+
+Weekly checks on both the `npm` and `github-actions` ecosystems.
+
+---
+
+## Docs
+
+- **`SECURITY.md`** — the threat model (no eval/dynamic code, no native modules, dependency scanning) and how to report a vulnerability.
+- **`ACCESSIBILITY.md`** — per-component WCAG mapping table. A component only gets a ✅ once it's both automated-clean (lint + tests) *and* manually verified with VoiceOver and TalkBack — the manual columns can't be filled from this environment and are explicitly flagged as pending until done on a real device/simulator.
+- **`README.md`** — the public face: CI/SAST badges, install instructions (not live yet — package isn't published), links to the other docs.
+
+---
+
+## What's deliberately not here yet
+
+Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 4 of the 6 planned components (`Checkbox`, `RadioGroup`, `Modal`, `Toast`) don't exist yet — `TextInput` and `Button` are the two built so far.

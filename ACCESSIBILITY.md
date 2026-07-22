@@ -13,7 +13,7 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 | Component  | WCAG criteria covered | Automated (lint + test) | Manual VoiceOver | Manual TalkBack |
 |------------|------------------------|--------------------------|-------------------|-------------------|
 | TextInput  | 1.3.1, 3.3.2, 4.1.2, 4.1.3 | ✅ (`TextInput.test.tsx`) | ⬜ pending          | ⬜ pending          |
-| Button     | 2.5.5, 4.1.2           | ⬜ not yet built          | ⬜                 | ⬜                 |
+| Button     | 2.5.5, 4.1.2           | ✅ (`Button.test.tsx`)    | ⬜ pending          | ⬜ pending          |
 | Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
 | RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
 | Modal      | 2.4.3, 4.1.2           | ⬜ not yet built          | ⬜                 | ⬜                 |
