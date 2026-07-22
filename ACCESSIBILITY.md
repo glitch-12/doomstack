@@ -15,7 +15,7 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 | TextInput  | 1.3.1, 3.3.2, 4.1.2, 4.1.3 | ✅ (`TextInput.test.tsx`) | ⬜ pending          | ⬜ pending          |
 | Button     | 2.5.5, 4.1.2           | ✅ (`Button.test.tsx`)    | ⬜ pending          | ⬜ pending          |
 | Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ✅ (`Checkbox.test.tsx`)  | ⬜ pending          | ⬜ pending          |
-| RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ⬜ not yet built          | ⬜                 | ⬜                 |
+| RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ✅ (`RadioGroup.test.tsx`)| ⬜ pending          | ⬜ pending          |
 | Modal      | 2.4.3, 4.1.2           | ⬜ not yet built          | ⬜                 | ⬜                 |
 | Toast      | 4.1.3 (status messages)| ⬜ not yet built          | ⬜                 | ⬜                 |
 

@@ -137,9 +137,31 @@ Re-exports `Checkbox.tsx`. Re-exported again from `src/index.ts`.
 
 ---
 
+## `src/components/RadioGroup/` — Phase 2, third primitive
+
+### `RadioGroup.tsx`
+Renders a `label` heading followed by one `Pressable` per `RadioOption` (`{ label, value }`), each with `accessibilityRole="radio"` and `accessibilityState={{ checked, disabled }}` — same controlled pattern as `Checkbox` (`value`/`onChange` owned by the caller, no internal state).
+
+**Known gotcha (caught before shipping, not after):** the first version wrapped the whole group in a `View` with `accessible` + `accessibilityRole="radiogroup"` + `accessibilityLabel={label}`, mirroring how `role="radiogroup"`/`aria-label` works on the web. That's wrong on native: RN's `accessible` prop, per its own docs, collapses **all subviews into a single accessibility element** on iOS — it would have merged all three radio options into one unreadable VoiceOver stop instead of three individually-focusable ones, defeating the entire point of giving each option its own role and label. The fix: the container `View` gets no accessibility props at all; `label` instead renders as a plain sibling `<Text accessibilityRole="header">` before the options. Screen readers announce the header once, then move into each `radio` individually — the native equivalent of a web `<fieldset><legend>`, without the aggregation.
+
+### `RadioGroup.test.tsx`
+Six tests:
+
+1. The group label renders with `header` role (`getByRole('header', { name: ... })`) — proves it's announced as a heading, not swallowed into a single group node
+2. Each option renders with its own `radio` role and label
+3. Only the selected option's `accessibilityState.checked` is `true`
+4. Pressing an option calls `onChange` with that option's `value`
+5. `disabled` shows up in each option's `accessibilityState` and blocks `onChange`
+6. Each option's rendered `minHeight` is `>= MIN_TOUCH_TARGET`
+
+### `index.ts`
+Re-exports `RadioGroup.tsx`. Re-exported again from `src/index.ts`.
+
+---
+
 ## `src/index.ts` — public API surface
 
-Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, and `components/Checkbox`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
+Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, `components/Checkbox`, and `components/RadioGroup`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
 
 ---
 
@@ -171,4 +193,4 @@ Weekly checks on both the `npm` and `github-actions` ecosystems.
 
 ## What's deliberately not here yet
 
-Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 3 of the 6 planned components (`RadioGroup`, `Modal`, `Toast`) don't exist yet — `TextInput`, `Button`, and `Checkbox` are the three built so far.
+Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 2 of the 6 planned components (`Modal`, `Toast`) don't exist yet — `TextInput`, `Button`, `Checkbox`, and `RadioGroup` are the four built so far.
