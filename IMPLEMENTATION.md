@@ -159,9 +159,30 @@ Re-exports `RadioGroup.tsx`. Re-exported again from `src/index.ts`.
 
 ---
 
+## `src/components/Modal/` — Phase 2, fourth primitive
+
+### `Modal.tsx`
+Wraps RN's own `Modal` (aliased `RNModal`, same convention `TextInput` used for `RNTextInput`) rather than building a custom overlay from scratch — the native `Modal` already presents in a separate native window/activity on both platforms, which is what actually keeps background content out of VoiceOver/TalkBack's reach; none of that isolation is something JS could reliably replicate. Key decisions:
+
+- **Backdrop vs. close button are two different affordances for two different users.** The dimmed backdrop `Pressable` closes on tap for sighted/touch users, but it's marked `accessibilityRole="none"` + `accessibilityElementsHidden` + `importantForAccessibility="no-hide-descendants"` — deliberately **not** an accessibility element. That's because VoiceOver/TalkBack intercept a plain single-finger tap for their own navigation gestures (selection, not activation); a screen reader user tapping the backdrop wouldn't fire `onPress` at all. The explicit "✕" `Pressable` with `accessibilityRole="button"` and `accessibilityLabel="Close"` is the actual accessible dismissal path — the backdrop is convenience on top, not a substitute.
+- **No nested touchables.** The backdrop and the card can't both be `Pressable`s with the card nested inside the backdrop — that trips the `no-nested-touchables` lint rule (and would confuse focus order for real). Instead they're siblings inside a plain `View`: an absolutely-positioned backdrop `Pressable` behind, a normal-flow card `View` in front, relying on RN's paint/hit-test order (later sibling on top) rather than DOM-style nesting.
+- **`accessibilityViewIsModal`** on the card `View` reinforces iOS modal isolation in case the native `Modal` presentation hasn't fully settled when VoiceOver focus moves (belt-and-suspenders, not load-bearing given the native `Modal` wrapper).
+- **Open announcement**: same pattern as `TextInput`'s error announcement — `AccessibilityInfo.announceForAccessibility(title)` fires once, tracked via a `useRef` so it only fires on the false→true transition, not on every re-render while open.
+- **`onRequestClose`** is wired to `onClose` unconditionally (required on Android — without it, the hardware/gesture back action is undefined behavior — and harmless on iOS, which ignores it).
+
+**Known gotcha (hit while testing this component):** `screen.UNSAFE_getByProps({ testID })` matches by prop value across **all** component instances, composite or host — including our own `Modal` function component itself, since it also happens to receive a `testID` prop. Querying for RN's actual `<Modal>` needs `screen.UNSAFE_getByType(RNModal)` (importing the real class from `react-native`) instead, to disambiguate from our own same-named wrapper. Separately, `getByTestId`/`getByRole`/etc. exclude anything hidden from accessibility by default (`accessibilityElementsHidden`/`importantForAccessibility="no-hide-descendants"`) — reaching the backdrop in a test requires the `{ includeHiddenElements: true }` query option, which is also the mechanism that proves those props are doing their job.
+
+### `Modal.test.tsx`
+Seven tests: renders title as `header` + shows children when `visible`; renders nothing when not `visible`; the close button (role `button`, name `Close`) calls `onClose`; backdrop press calls `onClose` (and doesn't when `dismissOnBackdropPress={false}`); `onRequestClose` (Android back) calls `onClose`; the backdrop is actually hidden from accessibility (`accessibilityElementsHidden`).
+
+### `index.ts`
+Re-exports `Modal.tsx`. Re-exported again from `src/index.ts`.
+
+---
+
 ## `src/index.ts` — public API surface
 
-Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, `components/Checkbox`, and `components/RadioGroup`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
+Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, `components/Checkbox`, `components/RadioGroup`, and `components/Modal`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
 
 ---
 
@@ -193,4 +214,4 @@ Weekly checks on both the `npm` and `github-actions` ecosystems.
 
 ## What's deliberately not here yet
 
-Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 2 of the 6 planned components (`Modal`, `Toast`) don't exist yet — `TextInput`, `Button`, `Checkbox`, and `RadioGroup` are the four built so far.
+Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 1 of the 6 planned components (`Toast`) doesn't exist yet — `TextInput`, `Button`, `Checkbox`, `RadioGroup`, and `Modal` are the five built so far.
