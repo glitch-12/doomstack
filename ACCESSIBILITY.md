@@ -17,7 +17,7 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 | Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ✅ (`Checkbox.test.tsx`)  | ⬜ pending          | ⬜ pending          |
 | RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ✅ (`RadioGroup.test.tsx`)| ⬜ pending          | ⬜ pending          |
 | Modal      | 2.4.3, 4.1.2           | ✅ (`Modal.test.tsx`)     | ⬜ pending          | ⬜ pending          |
-| Toast      | 4.1.3 (status messages)| ⬜ not yet built          | ⬜                 | ⬜                 |
+| Toast      | 4.1.3 (status messages)| ✅ (`Toast.test.tsx`)     | ⬜ pending          | ⬜ pending          |
 
 Each row moves to ✅ only once all four columns are done for that component — see [ROADMAP.md](ROADMAP.md) for build order.
 

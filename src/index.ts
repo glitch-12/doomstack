@@ -5,3 +5,4 @@ export * from './components/Button';
 export * from './components/Checkbox';
 export * from './components/RadioGroup';
 export * from './components/Modal';
+export * from './components/Toast';

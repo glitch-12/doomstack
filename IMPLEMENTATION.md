@@ -180,9 +180,36 @@ Re-exports `Modal.tsx`. Re-exported again from `src/index.ts`.
 
 ---
 
+## `src/components/Toast/` — Phase 2, fifth and final primitive
+
+### `Toast.tsx`
+A controlled, self-dismissing status message: `visible`/`message`/`onDismiss` owned by the caller (same controlled pattern as every other component here), plus a `duration` (default 4000ms) after which it calls `onDismiss` on its own. Renders `null` when not `visible` — the only component in this library that can render nothing, since a toast has no meaningful "present but invisible" state the way a disabled button does.
+
+- **Role**: `accessibilityRole="alert"` plus an explicit `AccessibilityInfo.announceForAccessibility(message)` call — same reasoning as `TextInput`'s error and `Modal`'s title: `accessibilityLiveRegion` (the web-like "just mark it live" approach) only works on Android, so VoiceOver needs the explicit push regardless of what role is set.
+- **No manual dismiss affordance.** Unlike `Modal`, there's no close button — a toast is inherently transient and this component's WCAG scope is just 4.1.3 (status messages get announced), not 2.2.1 (timing adjustable). Adding pause/extend controls would be solving a problem nothing in `ROADMAP.md` asked for.
+
+**Known gotcha (caught while writing the test, not after):** the first version read `message` and called `onDismiss` directly inside the `useEffect`, with `[visible, message, duration, onDismiss]` as the dependency array. That looks correct by `exhaustive-deps` standards, but it's a real bug: most callers pass an inline `() => setToastVisible(false)` as `onDismiss`, which is a **new function every render** — so the effect would tear down and re-arm the `setTimeout` on every parent re-render, and a toast sitting next to any frequently-re-rendering UI would never actually reach its timeout. Fixed by stashing `message` and `onDismiss` in refs (updated every render, but not effect dependencies) and keying the effect only on `[visible, duration]` — the timer now only resets on an actual open/duration change. `Toast.test.tsx` has a dedicated test that rerenders with a new `onDismiss` mid-countdown and asserts the *original* countdown still fires the *new* callback, which is what would have caught this before shipping.
+
+### `Toast.test.tsx`
+Six tests, using `jest.useFakeTimers()`:
+
+1. Renders nothing (`null`) when not `visible`
+2. Renders with `alert` role and the message as its accessible name
+3. `AccessibilityInfo.announceForAccessibility` is called exactly once with the message when it first appears
+4. `onDismiss` fires exactly at `duration`, not before
+5. Re-rendering with a new `onDismiss` mid-countdown doesn't reset the timer — the original countdown still fires the latest callback
+6. `success`/`error` variants resolve to different `backgroundColor`s
+
+Also notable: `AccessibilityInfo.announceForAccessibility` is a shared `jest.fn()` from RN's own test setup (not per-test-file), so this suite's `beforeEach` calls `jest.clearAllMocks()` — without it, call-count assertions here would pick up calls made by earlier tests in the same run.
+
+### `index.ts`
+Re-exports `Toast.tsx`. Re-exported again from `src/index.ts`.
+
+---
+
 ## `src/index.ts` — public API surface
 
-Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, `components/Checkbox`, `components/RadioGroup`, and `components/Modal`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
+Currently exports: everything from `theme/`, the `a11y/constants` helpers, and all six components — `TextInput`, `Button`, `Checkbox`, `RadioGroup`, `Modal`, `Toast`. This is the literal list of what `npm install doomstack` gives a consumer today. Phase 2 is now complete per `ROADMAP.md`; Phase 3 is publish polish, not new components.
 
 ---
 
@@ -214,4 +241,4 @@ Weekly checks on both the `npm` and `github-actions` ecosystems.
 
 ## What's deliberately not here yet
 
-Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 1 of the 6 planned components (`Toast`) doesn't exist yet — `TextInput`, `Button`, `Checkbox`, `RadioGroup`, and `Modal` are the five built so far.
+Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set. All 6 planned components (`TextInput`, `Button`, `Checkbox`, `RadioGroup`, `Modal`, `Toast`) are now built — Phase 2 is complete. What's left per the roadmap is Phase 3: manual VoiceOver/TalkBack passes (still pending for every component, see `ACCESSIBILITY.md`), README publish polish, and the first npm publish.
