@@ -113,9 +113,33 @@ Re-exports `Button.tsx`. Re-exported again from `src/index.ts`.
 
 ---
 
+## `src/components/Checkbox/` — Phase 2, second primitive
+
+### `Checkbox.tsx`
+Also a `Pressable`, but rendering its own label `<Text>` inline (unlike `TextInput`, which folds the label into `accessibilityLabel` alone) — a checkbox's visible label and the box sit side by side as one pressable row, so the whole row needs a single accessible name rather than two separately-focusable elements. Key decisions:
+
+- **Role + state**: `accessibilityRole="checkbox"` with `accessibilityState={{ checked, disabled }}` — `checked` is a first-class a11y state here (unlike `Button`, which has no analogous concept), so screen readers announce "checked"/"not checked" independent of the visual checkmark.
+- **Controlled, not internal state**: `checked` is a prop and `onChange(checked)` receives the *new* value — the component holds no state of its own, matching how `TextInput` treats `value`/`onChangeText`.
+- **Disabled**: same two-place pattern as `Button` — `disabled` prop blocks the press, `accessibilityState.disabled` informs screen readers.
+- **Touch target**: `minHeight: MIN_TOUCH_TARGET` on the whole row (box + label), not just the visual 22×22 box — the box is a visual affordance, but the entire row is the actual touch target, so it doesn't need `hitSlop` padding around a tiny box.
+
+### `Checkbox.test.tsx`
+Five tests, same `getByRole` convention as `Button`, using `{ name: ... }` to match the accessible name:
+
+1. Renders with a findable `checkbox` role and name
+2. `checked: true` shows up in `accessibilityState`, not just the visual mark
+3. Pressing calls `onChange` with the toggled boolean
+4. `disabled` shows up in `accessibilityState` and blocks `onChange`
+5. Rendered `minHeight` is `>= MIN_TOUCH_TARGET`
+
+### `index.ts`
+Re-exports `Checkbox.tsx`. Re-exported again from `src/index.ts`.
+
+---
+
 ## `src/index.ts` — public API surface
 
-Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, and `components/Button`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
+Currently exports: everything from `theme/`, the `a11y/constants` helpers, `components/TextInput`, `components/Button`, and `components/Checkbox`. This is the literal list of what `npm install doomstack` gives a consumer today. Every new component gets added here as it's built (see `ROADMAP.md` for order).
 
 ---
 
@@ -147,4 +171,4 @@ Weekly checks on both the `npm` and `github-actions` ecosystems.
 
 ## What's deliberately not here yet
 
-Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 4 of the 6 planned components (`Checkbox`, `RadioGroup`, `Modal`, `Toast`) don't exist yet — `TextInput` and `Button` are the two built so far.
+Per `ROADMAP.md`'s non-goals: no native modules, no `/example` app, no theming override API beyond the fixed token set, and 3 of the 6 planned components (`RadioGroup`, `Modal`, `Toast`) don't exist yet — `TextInput`, `Button`, and `Checkbox` are the three built so far.
