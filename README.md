@@ -12,7 +12,18 @@ Most component libraries treat accessibility and security as a follow-up pass. H
 
 ## Status
 
-Early — see [`ROADMAP.md`](ROADMAP.md) for the build order. Components ship one at a time, each fully done (implementation + tests + manual screen reader pass + docs) before the next one starts.
+Phase 2 complete — all six planned primitives (`TextInput`, `Button`, `Checkbox`, `RadioGroup`, `Modal`, `Toast`) are implemented, lint-clean, and unit-tested. See [`ROADMAP.md`](ROADMAP.md) for the build order. What's left before v0.1.0 ships is Phase 3: the manual VoiceOver/TalkBack pass per component (tracked in [`ACCESSIBILITY.md`](ACCESSIBILITY.md)) and the first npm publish.
+
+## Components
+
+| Component    | Description |
+|--------------|-------------|
+| `TextInput`  | Labeled text input with accessible error announcements |
+| `Button`     | Pressable button, `primary`/`secondary` variants |
+| `Checkbox`   | Controlled checkbox with `checked`/`disabled` a11y state |
+| `RadioGroup` | Controlled radio group with an announced header and individually-focusable options |
+| `Modal`      | Native modal wrapper with an accessible close button and hidden backdrop |
+| `Toast`      | Self-dismissing status alert, announced once on appearance |
 
 ## Install
 
