@@ -18,5 +18,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web"
   },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
   "private": true
 }
