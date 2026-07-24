@@ -12,16 +12,16 @@ Every interactive component in this library targets **WCAG 2.1 AA**. This docume
 
 | Component  | WCAG criteria covered | Automated (lint + test) | Manual VoiceOver | Manual TalkBack |
 |------------|------------------------|--------------------------|-------------------|-------------------|
-| TextInput  | 1.3.1, 3.3.2, 4.1.2, 4.1.3 | ✅ (`TextInput.test.tsx`) | ⬜ pending          | ⬜ pending          |
-| Button     | 2.5.5, 4.1.2           | ✅ (`Button.test.tsx`)    | ⬜ pending          | ⬜ pending          |
-| Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ✅ (`Checkbox.test.tsx`)  | ⬜ pending          | ⬜ pending          |
-| RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ✅ (`RadioGroup.test.tsx`)| ⬜ pending          | ⬜ pending          |
-| Modal      | 2.4.3, 4.1.2           | ✅ (`Modal.test.tsx`)     | ⬜ pending          | ⬜ pending          |
-| Toast      | 4.1.3 (status messages)| ✅ (`Toast.test.tsx`)     | ⬜ pending          | ⬜ pending          |
+| TextInput  | 1.3.1, 3.3.2, 4.1.2, 4.1.3 | ✅ (`TextInput.test.tsx`) | 🟡 inspector-verified | ⬜ pending          |
+| Button     | 2.5.5, 4.1.2           | ✅ (`Button.test.tsx`)    | 🟡 inspector-verified | ⬜ pending          |
+| Checkbox   | 1.3.1, 2.5.5, 4.1.2   | ✅ (`Checkbox.test.tsx`)  | 🟡 inspector-verified | ⬜ pending          |
+| RadioGroup | 1.3.1, 2.5.5, 4.1.2   | ✅ (`RadioGroup.test.tsx`)| 🟡 inspector-verified | ⬜ pending          |
+| Modal      | 2.4.3, 4.1.2           | ✅ (`Modal.test.tsx`)     | 🟡 inspector-verified | ⬜ pending          |
+| Toast      | 4.1.3 (status messages)| ✅ (`Toast.test.tsx`)     | 🟡 inspector-verified | ⬜ pending          |
 
 Each row moves to ✅ only once all four columns are done for that component — see [ROADMAP.md](ROADMAP.md) for build order.
 
-> **Manual VoiceOver/TalkBack passes require a real device or simulator and haven't been run yet for TextInput** — that step needs to happen on your machine (iOS Simulator + VoiceOver, Android emulator + TalkBack), not from this environment. Once you've done it, update the two "Manual" columns above with ✅/❌ and a one-line note.
+> **🟡 inspector-verified, 2026-07-24**: VoiceOver itself is unavailable on this machine's iOS Simulator runtime (iOS 26.5) — no VoiceOver toggle exists under Settings → Accessibility, and forcing the underlying preference didn't activate it. As a substitute, the full `example/App.tsx` demo flow (Email → Plan → terms checkbox → Continue → confirmation Modal → Confirm → Toast) was walked in Xcode's **Accessibility Inspector** against the running Simulator, which reads the real accessibility tree (role/label/state) without needing VoiceOver's speech engine. Confirmed correct for all six components: TextInput (label + value), Button (`button` role, correct name, disabled state), Checkbox (`checkbox` role, checked state), RadioGroup (header + individually-focusable `radio` options — not merged into one node), Modal (title as `header`, close button labeled "Close" not a bare "×", Confirm button), Toast (`alert` role, correct message). This is **not** a substitute for hearing actual spoken output — `Toast`'s `AccessibilityInfo.announceForAccessibility` call was confirmed to fire in code but could not be confirmed audibly since no screen reader was running to speak it. A real VoiceOver pass (on a physical device or a simulator runtime that supports it) and the TalkBack pass are both still outstanding before any row can move to full ✅.
 
 ## Shared conventions
 
